@@ -14,4 +14,4 @@
 ## Use
 
     vplot -l
-    vplot /dev/tty.1234 ./fixtures/square.plot
+    vplot /dev/tty.1234 ./fixtures/square.vplot

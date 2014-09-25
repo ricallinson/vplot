@@ -33,7 +33,7 @@ func openPort(p string) (io.ReadWriteCloser, error) {
 	return port, err
 }
 
-func send(s io.ReadWriteCloser, msg []byte) int {
+func write(s io.ReadWriteCloser, msg []byte) int {
 	n, err := s.Write(msg)
 	if err != nil {
 		log.Print(err)
@@ -42,26 +42,26 @@ func send(s io.ReadWriteCloser, msg []byte) int {
 	return n
 }
 
-func read(s io.ReadWriteCloser) []byte {
-	buf := make([]byte, 256)
-	n, err := s.Read(buf)
-	if err != nil {
-		log.Fatal(err)
+func sendCommand(port io.ReadWriteCloser, cmd string) bool {
+	if len(cmd) > 0 {
+		write(port, []byte(cmd))
 	}
-	return buf[:n]
+	scanner := bufio.NewScanner(os.Stdin)
+	for scanner.Scan() {
+		ack := scanner.Text()
+		log.Println(ack)
+		if ack == "OK" {
+			return true
+		}
+	}
+	return false
 }
 
-func processLine(port io.ReadWriteCloser, line string) bool {
-	send(port, []byte(line))
-	log.Printf("%s", read(port))
-	return true
-}
-
-func processFile(s io.ReadWriteCloser, file *os.File) bool {
+func processFile(port io.ReadWriteCloser, file *os.File) bool {
 	r := bufio.NewReader(file)
 	for {
-		line, err := r.ReadString('\n')
-		if processLine(s, line) == false {
+		cmd, err := r.ReadString('\n')
+		if sendCommand(port, cmd) == false {
 			return false
 		}
 		if err != nil {
@@ -90,14 +90,22 @@ func main() {
 	}
 
 	if filepath == "" {
-		log.Print("A path to a plotter file must be provided.\n")
+		log.Print("A path to a vplotter file must be provided.\n")
 		return
 	}
 
 	port, err := openPort(serialport)
 
 	if err != nil {
-		log.Print("The given serial port could be opened.\n")
+		log.Print("The given serial port could not be opened.\n")
+		return
+	}
+
+	defer port.Close()
+
+	// Send an empty string to read the boot message from the vplotter.
+	if sendCommand(port, "\n") == false {
+		log.Print("Cannot communicate with the vplottter at serial port [" + serialport + "].\n")
 		return
 	}
 
