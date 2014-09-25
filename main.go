@@ -61,34 +61,38 @@ func send(s io.ReadWriteCloser, msg []byte) int {
 
 func read(s io.ReadWriteCloser) []byte {
 	buf := make([]byte, 256)
-    n, err := s.Read(buf)
-    if err != nil {
-        log.Fatal(err)
-    }
-    return buf[:n]
+	n, err := s.Read(buf)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return buf[:n]
 }
 
-func process(s []io.ReadWriteCloser, file *os.File) {
+func processLine(s []io.ReadWriteCloser, line string) {
+	for _, port := range s {
+		send(port, []byte(line))
+		log.Printf("%s", read(port))
+	}
+	log.Printf("%s", line)
+}
+
+func processFile(s []io.ReadWriteCloser, file *os.File) {
 	r := bufio.NewReader(file)
 	for {
-        line, err := r.ReadString('\n')
-        if len(line) > 0 {
-            // log.Print(line)
-            for _, port := range s {
-            	send(port, []byte(line))
-            	log.Printf("%s", read(port))
-            }
-        }
-        if err != nil {
-            break
-        }
-    }
+		line, err := r.ReadString('\n')
+		if len(line) > 0 {
+			processLine(s, line)
+		}
+		if err != nil {
+			return
+		}
+	}
 }
 
 func main() {
 
 	var p = flag.String("p", "", "the USB port to use")
-	var l = flag.Bool("l", false, "list all avliable serial ports")
+	var l = flag.Bool("l", false, "list all available serial ports")
 	flag.Parse()
 
 	if *l {
@@ -124,5 +128,5 @@ func main() {
 		return
 	}
 
-	process(ports, file)
+	processFile(ports, file)
 }
