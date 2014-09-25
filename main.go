@@ -24,30 +24,13 @@ func listSerialPorts() (list []string) {
 	return list
 }
 
-func listPorts(port string) (list []string) {
-	if len(port) > 0 {
-		list = []string{port}
-	} else {
-		list = listSerialPorts()
-	}
-	return list
-}
-
-func openPort(p string) io.ReadWriteCloser {
+func openPort(p string) (io.ReadWriteCloser, error) {
 	c := &serial.Config{Name: p, Baud: 57600}
 	port, err := serial.OpenPort(c)
 	if err != nil {
-		log.Print(err)
-		return nil
+		return nil, err
 	}
-	return port
-}
-
-func openPorts(list []string) (ports []io.ReadWriteCloser) {
-	for _, port := range list {
-		ports = append(ports, openPort(port))
-	}
-	return ports
+	return port, err
 }
 
 func send(s io.ReadWriteCloser, msg []byte) int {
@@ -68,30 +51,28 @@ func read(s io.ReadWriteCloser) []byte {
 	return buf[:n]
 }
 
-func processLine(s []io.ReadWriteCloser, line string) {
-	for _, port := range s {
-		send(port, []byte(line))
-		log.Printf("%s", read(port))
-	}
-	log.Printf("%s", line)
+func processLine(port io.ReadWriteCloser, line string) bool {
+	send(port, []byte(line))
+	log.Printf("%s", read(port))
+	return true
 }
 
-func processFile(s []io.ReadWriteCloser, file *os.File) {
+func processFile(s io.ReadWriteCloser, file *os.File) bool {
 	r := bufio.NewReader(file)
 	for {
 		line, err := r.ReadString('\n')
-		if len(line) > 0 {
-			processLine(s, line)
+		if processLine(s, line) == false {
+			return false
 		}
 		if err != nil {
-			return
+			return false
 		}
 	}
+	return true
 }
 
 func main() {
 
-	var p = flag.String("p", "", "the USB port to use")
 	var l = flag.Bool("l", false, "list all available serial ports")
 	flag.Parse()
 
@@ -100,24 +81,23 @@ func main() {
 		return
 	}
 
-	filepath := flag.Arg(0)
+	serialport := flag.Arg(0)
+	filepath := flag.Arg(1)
 
-	if flag.Arg(0) == "" {
+	if serialport == "" {
+		log.Print("A serial port must be provided.\n")
+		return
+	}
+
+	if filepath == "" {
 		log.Print("A path to a plotter file must be provided.\n")
 		return
 	}
 
-	list := listPorts(*p)
+	port, err := openPort(serialport)
 
-	if len(list) == 0 {
-		log.Print("No serial ports found.\n")
-		return
-	}
-
-	ports := openPorts(list)
-
-	if len(ports) == 0 {
-		log.Print("No serial ports could be opened.\n")
+	if err != nil {
+		log.Print("The given serial port could be opened.\n")
 		return
 	}
 
@@ -128,5 +108,5 @@ func main() {
 		return
 	}
 
-	processFile(ports, file)
+	processFile(port, file)
 }

@@ -1,4 +1,4 @@
-# vplotter-driver
+# vplot
 
 ## Developer Setup
 
@@ -12,4 +12,5 @@
 
 ## Use
 
-    vplotter-driver
+    vplot -l
+    vplot <serial-port> <plotter-file>
