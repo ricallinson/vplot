@@ -35,12 +35,12 @@ func listPorts(port string) (list []string) {
 
 func openPort(p string) io.ReadWriteCloser {
 	c := &serial.Config{Name: p, Baud: 57600}
-	s, err := serial.OpenPort(c)
+	port, err := serial.OpenPort(c)
 	if err != nil {
 		log.Print(err)
 		return nil
 	}
-	return s
+	return port
 }
 
 func openPorts(list []string) (ports []io.ReadWriteCloser) {
@@ -59,24 +59,30 @@ func send(s io.ReadWriteCloser, msg []byte) int {
 	return n
 }
 
-func read(s io.ReadWriteCloser) {
-	buf := make([]byte, 128)
+func read(s io.ReadWriteCloser) []byte {
+	buf := make([]byte, 256)
     n, err := s.Read(buf)
     if err != nil {
         log.Fatal(err)
     }
-    log.Printf("%s", buf[:n])
+    return buf[:n]
 }
 
-func listen(ports []io.ReadWriteCloser) {
-	reader := bufio.NewReader(os.Stdin)
+func process(s []io.ReadWriteCloser, file *os.File) {
+	r := bufio.NewReader(file)
 	for {
-		msg, _ := reader.ReadString('\n')
-		for _, port := range ports {
-			send(port, []byte(msg))
-			read(port)
-		}
-	}
+        line, err := r.ReadString('\n')
+        if len(line) > 0 {
+            // log.Print(line)
+            for _, port := range s {
+            	send(port, []byte(line))
+            	log.Printf("%s", read(port))
+            }
+        }
+        if err != nil {
+            break
+        }
+    }
 }
 
 func main() {
@@ -87,6 +93,13 @@ func main() {
 
 	if *l {
 		log.Printf("%v", listSerialPorts())
+		return
+	}
+
+	filepath := flag.Arg(0)
+
+	if flag.Arg(0) == "" {
+		log.Print("A path to a plotter file must be provided.\n")
 		return
 	}
 
@@ -104,5 +117,12 @@ func main() {
 		return
 	}
 
-	listen(ports)
+	file, err := os.Open(filepath)
+
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	process(ports, file)
 }
