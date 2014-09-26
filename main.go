@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"flag"
+	"fmt"
 	"github.com/tarm/goserial"
 	"io"
 	"io/ioutil"
@@ -24,6 +25,11 @@ func listSerialPorts() (list []string) {
 	return list
 }
 
+func openPortMock(p string) (io.ReadWriteCloser, error) {
+	file, _ := os.Open("./fixtures/vplotter.mock")
+	return file, nil
+}
+
 func openPort(p string) (io.ReadWriteCloser, error) {
 	c := &serial.Config{Name: p, Baud: 57600}
 	port, err := serial.OpenPort(c)
@@ -33,8 +39,8 @@ func openPort(p string) (io.ReadWriteCloser, error) {
 	return port, err
 }
 
-func write(s io.ReadWriteCloser, msg []byte) int {
-	n, err := s.Write(msg)
+func write(port io.ReadWriteCloser, msg []byte) int {
+	n, err := port.Write(msg)
 	if err != nil {
 		log.Print(err)
 		return 0
@@ -42,26 +48,29 @@ func write(s io.ReadWriteCloser, msg []byte) int {
 	return n
 }
 
-func sendCommand(port io.ReadWriteCloser, cmd string) bool {
-	if len(cmd) > 0 {
-		write(port, []byte(cmd))
-	}
-	scanner := bufio.NewScanner(os.Stdin)
-	for scanner.Scan() {
-		ack := scanner.Text()
-		log.Println(ack)
-		if ack == "OK" {
+func processCommand(w io.Writer, r *bufio.Reader, cmd string) bool {
+	// fmt.Print("CMD: " + cmd)
+	// write(w, []byte(cmd))
+	for {
+		ack, err := r.ReadString('\n')
+		fmt.Print(ack)
+		if ack == "OK\n" {
 			return true
+		}
+		if err != nil {
+			return false
 		}
 	}
 	return false
 }
 
 func processFile(port io.ReadWriteCloser, file *os.File) bool {
+	p := bufio.NewReader(port)
 	r := bufio.NewReader(file)
+	processCommand(port, p, "\n") // boot up
 	for {
 		cmd, err := r.ReadString('\n')
-		if sendCommand(port, cmd) == false {
+		if processCommand(port, p, cmd) == false {
 			return false
 		}
 		if err != nil {
@@ -74,6 +83,7 @@ func processFile(port io.ReadWriteCloser, file *os.File) bool {
 func main() {
 
 	var l = flag.Bool("l", false, "list all available serial ports")
+	var m = flag.Bool("m", false, "use the given serial port value as a mock vplotter")
 	flag.Parse()
 
 	if *l {
@@ -94,7 +104,14 @@ func main() {
 		return
 	}
 
-	port, err := openPort(serialport)
+	var port io.ReadWriteCloser
+	var err error
+
+	if *m {
+		port, err = openPortMock(serialport)
+	} else {
+		port, err = openPort(serialport)
+	}
 
 	if err != nil {
 		log.Print("The given serial port could not be opened.\n")
@@ -102,12 +119,6 @@ func main() {
 	}
 
 	defer port.Close()
-
-	// Send an empty string to read the boot message from the vplotter.
-	if sendCommand(port, "\n") == false {
-		log.Print("Cannot communicate with the vplottter at serial port [" + serialport + "].\n")
-		return
-	}
 
 	file, err := os.Open(filepath)
 

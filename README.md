@@ -14,4 +14,4 @@
 ## Use
 
     vplot -l
-    vplot /dev/tty.1234 ./fixtures/square.vplot
+    vplot -m ./fixtures/vplotter.mock ./fixtures/square.vplot
