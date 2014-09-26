@@ -39,10 +39,10 @@ func openPort(p string) (io.ReadWriteCloser, error) {
 	return port, err
 }
 
-func write(port io.ReadWriteCloser, msg []byte) int {
-	n, err := port.Write(msg)
+func write(port io.Writer, cmd []byte) int {
+	n, err := port.Write(cmd)
 	if err != nil {
-		log.Print(err)
+		log.Println(err)
 		return 0
 	}
 	return n
@@ -50,7 +50,7 @@ func write(port io.ReadWriteCloser, msg []byte) int {
 
 func processCommand(w io.Writer, r *bufio.Reader, cmd string) bool {
 	// fmt.Print("CMD: " + cmd)
-	// write(w, []byte(cmd))
+	write(w, []byte(cmd))
 	for {
 		ack, err := r.ReadString('\n')
 		fmt.Print(ack)
@@ -67,7 +67,7 @@ func processCommand(w io.Writer, r *bufio.Reader, cmd string) bool {
 func processFile(port io.ReadWriteCloser, file *os.File) bool {
 	p := bufio.NewReader(port)
 	r := bufio.NewReader(file)
-	processCommand(port, p, "\n") // boot up
+	processCommand(port, p, "\n") // Read the boot up text.
 	for {
 		cmd, err := r.ReadString('\n')
 		if processCommand(port, p, cmd) == false {
