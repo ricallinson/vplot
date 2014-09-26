@@ -26,8 +26,8 @@ func listSerialPorts() (list []string) {
 }
 
 func openPortMock(p string) (io.ReadWriteCloser, error) {
-	file, _ := os.Open("./fixtures/vplotter.mock")
-	return file, nil
+	port, _ := os.Open(p)
+	return port, nil
 }
 
 func openPort(p string) (io.ReadWriteCloser, error) {
