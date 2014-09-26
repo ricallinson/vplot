@@ -7,7 +7,6 @@ import (
 	"github.com/tarm/goserial"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"strings"
@@ -42,38 +41,32 @@ func openPort(p string) (io.ReadWriteCloser, error) {
 func write(port io.Writer, cmd []byte) int {
 	n, err := port.Write(cmd)
 	if err != nil {
-		log.Println(err)
+		fmt.Println(err)
 		return 0
 	}
 	return n
 }
 
-func processCommand(w io.Writer, r *bufio.Reader, cmd string) bool {
+func processCommand(w io.Writer, r *bufio.Scanner, cmd string) bool {
 	// fmt.Print("CMD: " + cmd)
-	write(w, []byte(cmd))
-	for {
-		ack, err := r.ReadString('\n')
-		fmt.Print(ack)
-		if ack == "OK\n" {
+	write(w, []byte(cmd + "\n"))
+	for r.Scan() {
+		ack := r.Text()
+		fmt.Println(ack)
+		if ack == "OK" {
 			return true
-		}
-		if err != nil {
-			return false
 		}
 	}
 	return false
 }
 
 func processFile(port io.ReadWriteCloser, file *os.File) bool {
-	p := bufio.NewReader(port)
-	r := bufio.NewReader(file)
+	p := bufio.NewScanner(port)
+	r := bufio.NewScanner(file)
 	processCommand(port, p, "\n") // Read the boot up text.
-	for {
-		cmd, err := r.ReadString('\n')
+	for r.Scan() {
+		cmd := r.Text()
 		if processCommand(port, p, cmd) == false {
-			return false
-		}
-		if err != nil {
 			return false
 		}
 	}
@@ -87,7 +80,7 @@ func main() {
 	flag.Parse()
 
 	if *l {
-		log.Printf("%v", listSerialPorts())
+		fmt.Printf("%v", listSerialPorts())
 		return
 	}
 
@@ -95,12 +88,12 @@ func main() {
 	filepath := flag.Arg(1)
 
 	if serialport == "" {
-		log.Print("A serial port must be provided.\n")
+		fmt.Print("A serial port must be provided.\n")
 		return
 	}
 
 	if filepath == "" {
-		log.Print("A path to a vplotter file must be provided.\n")
+		fmt.Print("A path to a vplotter file must be provided.\n")
 		return
 	}
 
@@ -114,7 +107,7 @@ func main() {
 	}
 
 	if err != nil {
-		log.Print("The given serial port could not be opened.\n")
+		fmt.Print("The given serial port could not be opened.\n")
 		return
 	}
 
@@ -123,9 +116,13 @@ func main() {
 	file, err := os.Open(filepath)
 
 	if err != nil {
-		log.Println(err)
+		fmt.Println(err)
 		return
 	}
 
-	processFile(port, file)
+	if processFile(port, file) == false {
+		fmt.Print("Error.\n")
+	}
+
+	fmt.Print("Completed.\n")
 }
