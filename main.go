@@ -52,10 +52,10 @@ func processCommand(w io.Writer, r *bufio.Scanner, cmd string) bool {
 	write(w, []byte(cmd + "\n"))
 	for r.Scan() {
 		ack := r.Text()
-		fmt.Println(ack)
 		if ack == "OK" {
 			return true
 		}
+		fmt.Println(ack)
 	}
 	return false
 }
