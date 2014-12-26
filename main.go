@@ -80,7 +80,7 @@ func main() {
 	flag.Parse()
 
 	if *l {
-		fmt.Printf("%v", listSerialPorts())
+		fmt.Printf("%v\n", listSerialPorts())
 		return
 	}
 
