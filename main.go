@@ -63,7 +63,7 @@ func processCommand(w io.Writer, r *bufio.Scanner, cmd string) bool {
 func processFile(port io.ReadWriteCloser, file *os.File) bool {
 	p := bufio.NewScanner(port)
 	r := bufio.NewScanner(file)
-	processCommand(port, p, "\n") // Read the boot up text.
+	// processCommand(port, p, "\n") // Make sure there is nothing in the buffer.
 	for r.Scan() {
 		cmd := r.Text()
 		if processCommand(port, p, cmd) == false {
@@ -86,6 +86,7 @@ func main() {
 
 	serialport := flag.Arg(0)
 	filepath := flag.Arg(1)
+	cfgpath := flag.Arg(2)
 
 	if serialport == "" {
 		fmt.Print("A serial port must be provided.\n")
@@ -113,6 +114,19 @@ func main() {
 
 	defer port.Close()
 
+	// If there is a configuration provided, send it.
+	if len(cfgpath) > 0 {
+		cfg, err := os.Open(cfgpath)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		if processFile(port, cfg) == false {
+			fmt.Print("Error sending configuration.\n")
+			return
+		}
+	}
+
 	file, err := os.Open(filepath)
 
 	if err != nil {
@@ -121,7 +135,8 @@ func main() {
 	}
 
 	if processFile(port, file) == false {
-		fmt.Print("Error.\n")
+		fmt.Print("Error sending command.\n")
+		return
 	}
 
 	fmt.Print("Completed.\n")
