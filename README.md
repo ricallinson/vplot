@@ -72,11 +72,9 @@ Now connect to the Raspberry Pi;
 
     ssh 192.168.0.189 -l pi
 
-To keep the plot going after the `ssh` session use `screen`. Once in a screen you can use `ctrl + A + D` to exit and keep it running. Use `screen -l` to list the screens. Use `screen -r <screen>` to get back into a screen.
+To keep the plot going after the `ssh` session use `screen`. Once in a screen you can use `ctrl + A + D` to exit and keep it running. Use `screen -l` to list the screens. Use `screen -r <screen>` to resume screen.
 
     screen
-    cd ~/Go
-    gwm use .
-    vplot /dev ~/plots/plot.vplot ~/Go/src/github.com/ricallinson/vplot/config/wall.cfg
+    ~/Go/bin/vplot /dev/ttyACM0 ~/plots/plot.vplot ~/Go/src/github.com/ricallinson/vplot/config/wall.cfg
 
 Once the plot has started you can exit the screen any time by pressing `ctrl + A + D`.
