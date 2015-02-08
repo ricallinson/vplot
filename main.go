@@ -12,6 +12,8 @@ import (
 	"strings"
 )
 
+var MOCK = false
+
 // Looks into the "/dev" directory and returns all the files that maybe serial ports.
 func listSerialPorts() (list []string) {
 	dir := "/dev"
@@ -25,7 +27,7 @@ func listSerialPorts() (list []string) {
 }
 
 func openPortMock(p string) (io.ReadWriteCloser, error) {
-	port, _ := os.Open(p)
+	port, _ := os.OpenFile(p, os.O_RDWR, 0644)
 	return port, nil
 }
 
@@ -49,7 +51,10 @@ func write(port io.Writer, cmd []byte) int {
 
 func processCommand(w io.Writer, r *bufio.Scanner, cmd string) bool {
 	// fmt.Print("CMD: " + cmd)
-	write(w, []byte(cmd + "\n"))
+	write(w, []byte(cmd+"\n"))
+	if MOCK {
+		return true
+	}
 	for r.Scan() {
 		ack := r.Text()
 		if ack == "OK" {
@@ -63,10 +68,13 @@ func processCommand(w io.Writer, r *bufio.Scanner, cmd string) bool {
 func processFile(port io.ReadWriteCloser, file *os.File) bool {
 	p := bufio.NewScanner(port)
 	r := bufio.NewScanner(file)
-	// processCommand(port, p, "\n") // Make sure there is nothing in the buffer.
+	c := bufio.NewReader(os.Stdin)
 	for r.Scan() {
 		cmd := r.Text()
-		if processCommand(port, p, cmd) == false {
+		if cmd == "P" {
+			fmt.Print("Hit return to continue\n")
+			c.ReadString('\n')
+		} else if processCommand(port, p, cmd) == false {
 			return false
 		}
 	}
@@ -102,6 +110,7 @@ func main() {
 	var err error
 
 	if *m {
+		MOCK = true
 		port, err = openPortMock(serialport)
 	} else {
 		port, err = openPort(serialport)
