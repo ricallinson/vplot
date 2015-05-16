@@ -77,4 +77,4 @@ To keep the plot going after the `ssh` session use `screen`. Once in a screen yo
     screen
     ~/Go/bin/vplot /dev/ttyACM0 ~/plots/plot.vplot ~/Go/src/github.com/ricallinson/vplot/config/wall.cfg
 
-Once the plot has started you can exit the screen any time by pressing `ctrl + A + D`.
+Once the plot has started you can exit the screen any time by pressing `ctrl + A + D`. You can list running screens with `screen -r`.
