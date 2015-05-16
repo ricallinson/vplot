@@ -66,7 +66,7 @@ Create a directory to upload the plot files into;
 
 Send a plot to the Raspberry Pi;
 
-    scp <file>.plot pi@192.168.0.189:~/plots
+    scp <file>.vplot pi@192.168.0.189:~/plots
 
 Now connect to the Raspberry Pi;
 
